@@ -5,7 +5,7 @@ using ServiceStack.Redis;
 
 namespace Resque.RedisClient.ServiceStack
 {
-    public class RedisServiceStackConnector : IRedis
+    public class RedisServiceStackConnector : IRedis, IDisposable
     {
         private IRedisClient Client { get; set; }
         public string RedisNamespace { get; set; }
@@ -17,6 +17,30 @@ namespace Resque.RedisClient.ServiceStack
             RedisDb = redisDb;
             RedisNamespace = redisNamespace;
         }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposing) return;
+
+            if (Client != null)
+            {
+                try
+                {
+                    Client.Dispose();
+                }
+                catch
+                {
+                }
+                Client = null;
+            }
+        }
+
 
         public string KeyInNamespace(string key)
         {
@@ -53,6 +77,43 @@ namespace Resque.RedisClient.ServiceStack
         public Dictionary<string, string> HGetAll(string key)
         {
             return Client.GetAllEntriesFromHash(KeyInNamespace(key));
+        }
+
+        public string HGet(string key, string field)
+        {
+            return Client.GetValueFromHash(KeyInNamespace(key), field);
+        }
+
+        bool IRedis.HSet(string key, string field, string value)
+        {
+            return Client.SetEntryInHash(KeyInNamespace(key), field, value);
+        }
+
+        public bool ZAdd(string key, string value, long score)
+        {
+            return Client.AddItemToSortedSet(KeyInNamespace(key), value, score);
+        }
+
+        public long ZCard(string key)
+        {
+            return Client.GetSortedSetCount(KeyInNamespace(key));
+        }
+
+        public long ZCard(string key, long min, long max)
+        {
+//            return Client.GetSortedSetCount(KeyInNamespace(key), min.ToString(), max.ToString());
+            throw new NotImplementedException("Awaiting release of updated ServiceStack.Redis");
+        }
+
+        public Tuple<string, double>[] ZRange(string key, long start, long stop, bool @ascending = false)
+        {
+//            return Client.GetRangeFromSortedSet(KeyInNamespace(key), (int) start, (int) stop);
+            throw new NotImplementedException();
+        }
+
+        public double ZScore(string key, string member)
+        {
+            throw new NotImplementedException();
         }
 
         public void HSet(string key, string field, string value)
